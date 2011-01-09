@@ -14,19 +14,21 @@ license=('GPL')
 groups=()
 depends=('netcfg>=2.0.0' 'bash' 'awk')
 optdepends=()
-source=(dmnet.sh)
+source=(https://github.com/domachine/dmnet/tarball/master)
 noextract=()
-md5sums=('c793db201ca52f4e5ee5d9b0f230f863')
+md5sums=('6901f544c0d730fd1044780074bf73c7')
 
 build() {
   cd "$srcdir"
-  cat "${source[0]}" >"${source[0]%.sh}"
 
-  chmod a+x "${source[0]%.sh}"
+  cd domachine-dmnet-*
+  cat "dmnet.sh" >"dmnet"
+
+  chmod a+x "dmnet"
 }
 
 package() {
-  cd "$srcdir"
+  cd "$srcdir"/domachine-dmnet-*
   install -d "$pkgdir/etc/rc.d"
   install dmnet "$pkgdir/etc/rc.d"
 }
