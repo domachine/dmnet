@@ -16,7 +16,7 @@ depends=('netcfg>=2.0.0' 'bash' 'awk')
 optdepends=()
 source=(https://github.com/domachine/dmnet/tarball/master)
 noextract=()
-md5sums=('757662a1be12efbd20c8914bce8d1367')
+md5sums=('b1791be7405da80ec7d63f22a0a253d6')
 
 build() {
   cd "$srcdir"
