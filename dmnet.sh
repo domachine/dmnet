@@ -5,7 +5,7 @@
 
 # Array that will be filled with available networks
 networks=()
-version_string="dmnet 0.1.1"
+version_string="dmnet 0.1.4"
 
 network_is_on()
 {
