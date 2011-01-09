@@ -32,8 +32,8 @@ case "$1" in
         
         # Activate network-interface
         stat_busy "Checking wlan interface"
-        if device_status "wlan0"; then
-            stat_append " -- configured"
+        if ! device_status "wlan0"; then
+            stat_append " -- not yet connected"
             stat_done
             stat_busy "Scanning for wireless networks"
 
@@ -79,7 +79,7 @@ case "$1" in
                 (( i += 2 ))
             done
         else
-            stat_fail "Unable to configure wlan-interface"
+            stat_done
         fi
 
         if [[ -f /etc/network.d/ethernet-dhcp ]] && ((found_wlan == 0)); then

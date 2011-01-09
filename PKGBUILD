@@ -5,7 +5,7 @@
 
 # Maintainer: Dominik Burgdörfer <dominik.burgdoerfer@googlemail.com>
 pkgname=dmnet
-pkgver=0.1.1
+pkgver=0.1.4
 pkgrel=1
 pkgdesc="Starts netcfg profiles based on the network in the environment."
 arch=(any)
