@@ -2,6 +2,7 @@
 
 . /etc/rc.conf
 . /etc/rc.d/functions
+. /usr/lib/network/network
 
 # Array that will be filled with available networks
 networks=()
@@ -20,83 +21,103 @@ network_is_on()
 
 device_status()
 {
-    CARRIER="/sys/class/net/$1/carrier"
-    cat $CARRIER &>/dev/null || ifconfig "$1" up
-    test $(cat $CARRIER) = 1
+    local carrier="/sys/class/net/$1/carrier"
+    cat $carrier &>/dev/null || ifconfig "$1" up
+    test $(cat $carrier) = 1
 }
 
+check_wlan()
+{
+    local found_wlan=1
 
-case "$1" in
-    start)
-        found_wlan=0
-        
-        # Activate network-interface
-        stat_busy "Checking wlan interface"
-        if ! device_status "wlan0"; then
-            stat_append " -- not yet connected"
-            stat_done
-            stat_busy "Scanning for wireless networks"
+    [[ -z $DMNET_WLAN_TRIGGER ]] && return 1
 
-            essids=$(iwlist wlan0 scan | \
-                awk -F '(:| *)' '$2 == "ESSID" {print $3}')
+    # Activate network-interface
+    stat_busy "Checking wlan interface"
+    if ! device_status "wlan0"; then
+        stat_append " -- not yet connected"
+        stat_done
+        stat_busy "Scanning for wireless networks"
+
+        essids=$(iwlist wlan0 scan | \
+            awk -F '(:| *)' '$2 == "ESSID" {print $3}')
 
             # Runtime variable
-            declare -i i=0
+        declare -i i=0
 
             # Read networks
-            tmp=$(mktemp)
+        tmp=$(mktemp)
 
-            eval echo "'$essids'" >$tmp
+        eval echo "'$essids'" >$tmp
 
-            while read network; do
+        while read network; do
             # Filter networks with empty essids
-                if [[ $network == \"\" ]]; then
-                    continue
-                fi
-                
-                eval networks[$i]=$network
-                (( ++i ))
-            done < $tmp
+            if [[ $network == \"\" ]]; then
+                continue
+            fi
+            
+            eval networks[$i]=$network
+            (( ++i ))
+        done < $tmp
 
             # Cleanup
-            rm $tmp
+        rm $tmp
 
-            stat_done
+        stat_done
 
-            i=0
+        i=0
 
-            found_wlan=0
-            # Loop through all triggers and activate them
-            while (( i < ${#WLAN_TRIGGER[@]} )); do
-                if network_is_on "${WLAN_TRIGGER[$i]}"; then
-                    netcfg "${WLAN_TRIGGER[$(( i+1 ))]}"
-                    [[ $? -eq 0 ]] && {
-                        found_wlan=1
-                        break
-                    }
-                fi
+        # Loop through all triggers and activate them
+        while (( i < ${#DMNET_WLAN_TRIGGER[@]} )); do
+            echo "Checking ${DMNET_WLAN_TRIGGER[$i]}"
+            if network_is_on "${DMNET_WLAN_TRIGGER[$i]}"; then
+                profile_up "${DMNET_WLAN_TRIGGER[$(( i+1 ))]}"
+                [[ $? -eq 0 ]] && {
+                    found_wlan=0
+                    break
+                }
+            fi
 
-                (( i += 2 ))
-            done
-        else
-            stat_done
-        fi
+            (( i += 2 ))
+        done
+    else
+        stat_done
+    fi
 
-        if [[ -f /etc/network.d/ethernet-dhcp ]] && ((found_wlan == 0)); then
-            stat_busy "Checking ethernet-connection"
+    return $found_wlan
+}
 
-            if device_status "eth0"; then
+check_network()
+{
+    [[ $(id -u) != 0 ]] && {
+        echo "dmnet: You must be root to run that script." >&2
+        exit 1
+    }
+
+    check_wlan || {
+        [[ -z $DMNET_ETHERNET_INTERFACE ]] || {
+            stat_busy "Checking cable-connection"
+            if device_status $DMNET_ETHERNET_INTERFACE; then
                 stat_append " -- connection detected"
                 stat_done
-                netcfg ethernet-dhcp
+                dhcpcd $DMNET_ETHERNET_INTERFACE
             else
                 stat_append " -- no connection"
                 stat_done
             fi
-        fi
+        }
+    }
+}
+
+case "$1" in
+    start)
+        check_network
         ;;
     --version|-v)
         echo "$version_string"
+        ;;
+    *)
+        check_network
         ;;
 esac
 
