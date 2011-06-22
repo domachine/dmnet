@@ -30,6 +30,7 @@ check_wlan()
 {
     local found_wlan=1
 
+    [[ -z $WLAN_TRIGGER ]] || echo "WLAN_TRIGGER setting was renamed to DMNET_WLAN_TRIGGER"
     [[ -z $DMNET_WLAN_TRIGGER ]] && return 1
 
     # Activate network-interface
@@ -69,7 +70,6 @@ check_wlan()
 
         # Loop through all triggers and activate them
         while (( i < ${#DMNET_WLAN_TRIGGER[@]} )); do
-            echo "Checking ${DMNET_WLAN_TRIGGER[$i]}"
             if network_is_on "${DMNET_WLAN_TRIGGER[$i]}"; then
                 profile_up "${DMNET_WLAN_TRIGGER[$(( i+1 ))]}"
                 [[ $? -eq 0 ]] && {
