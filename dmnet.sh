@@ -22,7 +22,7 @@ network_is_on()
 device_status()
 {
     local carrier="/sys/class/net/$1/carrier"
-    cat $carrier &>/dev/null || ifconfig "$1" up
+    cat $carrier &>/dev/null || ifconfig "$1" up &>/dev/null
     test $(cat $carrier) = 1
 }
 
@@ -87,6 +87,11 @@ check_wlan()
     return $found_wlan
 }
 
+check_eth()
+{
+    ps -eo args|egrep "^([a-zA-Z0-9/]*)dhcpcd $1\$" &>/dev/null
+}
+
 check_network()
 {
     [[ $(id -u) != 0 ]] && {
@@ -94,15 +99,28 @@ check_network()
         exit 1
     }
 
+    [[ -z $DMNET_ETHERNET_INTERFACE ]] || {
+        stat_busy "Checking connection status"
+        local eth_status=$(device_status $DMNET_ETHERNET_INTERFACE; echo $?)
+        if [[ $eth_status == 0 ]] && check_eth $DMNET_ETHERNET_INTERFACE; then
+            stat_append " -- already connected"
+            stat_done
+            exit 0
+        fi
+
+        stat_done
+    }
+
     check_wlan || {
         [[ -z $DMNET_ETHERNET_INTERFACE ]] || {
-            stat_busy "Checking cable-connection"
-            if device_status $DMNET_ETHERNET_INTERFACE; then
+            stat_busy "Checking ethernet"
+
+            if [[ $eth_status == 0 ]]; then
                 stat_append " -- connection detected"
                 stat_done
                 dhcpcd $DMNET_ETHERNET_INTERFACE
             else
-                stat_append " -- no connection"
+                stat_append " -- not plugged"
                 stat_done
             fi
         }
