@@ -36,7 +36,7 @@ check_wlan()
     # Activate network-interface
     stat_busy "Checking wlan interface"
     if ! device_status "wlan0"; then
-        stat_append " -- not yet connected"
+        stat_append "-- not connected"
         stat_done
         stat_busy "Scanning for wireless networks"
 
@@ -81,6 +81,8 @@ check_wlan()
             (( i += 2 ))
         done
     else
+        found_wlan=0
+        stat_append "--> connected"
         stat_done
     fi
 
@@ -100,12 +102,14 @@ check_network()
     }
 
     [[ -z $DMNET_ETHERNET_INTERFACE ]] || {
-        stat_busy "Checking connection status"
+        stat_busy "Checking ethernet connection status"
         local eth_status=$(device_status $DMNET_ETHERNET_INTERFACE; echo $?)
         if [[ $eth_status == 0 ]] && check_eth $DMNET_ETHERNET_INTERFACE; then
-            stat_append " -- already connected"
+            stat_append "--> connected"
             stat_done
             exit 0
+        else
+            stat_append "--> not connected"
         fi
 
         stat_done
